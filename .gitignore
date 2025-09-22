@@ -1,0 +1,26 @@
+# Template: Go.AllowList.gitignore
+
+# Ignore
+# all files
+*
+# track all sub-directories
+!*/
+
+# Allow
+!/.gitignore
+
+!*.go
+!go.sum
+!go.mod
+
+!README.md
+!LICENSE
+
+!/internal/
+!/internal/**/*
+
+!/cmd/
+!/cmd/**/*
+
+!/test/
+!/test/**/*
