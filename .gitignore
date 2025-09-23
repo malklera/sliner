@@ -19,8 +19,8 @@
 !/internal/
 !/internal/**/*
 
-!/cmd/
-!/cmd/**/*
+!/pkg/
+!/pkg/**/*
 
 !/test/
 !/test/**/*
