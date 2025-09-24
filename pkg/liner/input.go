@@ -4,10 +4,31 @@ package liner
 import (
 	"bufio"
 	"golang.org/x/sys/unix"
+	"github.com/malklera/sliner/internal"
 	"os"
 	"os/signal"
 	"strings"
 )
+
+const (
+	getTermios = unix.TCGETS
+	setTermios = unix.TCSETS
+
+	icrnl  = unix.ICRNL
+	inpck  = unix.INPCK
+	istrip = unix.ISTRIP
+	ixon   = unix.IXON
+	cs8    = unix.CS8
+	isig   = unix.ISIG
+	icanon = unix.ICANON
+	iexten = unix.IEXTEN
+
+	cursorColumn = false
+)
+
+type termios struct {
+	unix.Termios
+}
 
 type nexter struct {
 	r   rune
@@ -45,9 +66,9 @@ func NewLiner() *State {
 	}
 	if s.terminalSupported && !s.inputRedirected && !s.outputRedirected {
 		mode := s.origMode
-		mode.Iflag &^= icrnl | inpck | istrip | ixon
-		mode.Cflag |= cs8
-		mode.Lflag &^= unix.ECHO | icanon | iexten
+		mode.Iflag &^= internal.Icrnl | internal.Inpck | internal.Istrip | internal.Ixon
+		mode.Cflag |= internal.Cs8
+		mode.Lflag &^= unix.ECHO | internal.Icanon | internal.Iexten
 		mode.Cc[unix.VMIN] = 1
 		mode.Cc[unix.VTIME] = 0
 		mode.ApplyMode()
@@ -75,6 +96,8 @@ func TerminalSupported() bool {
 	bad := map[string]bool{"": true, "dumb": true, "cons25": true}
 	return !bad[strings.ToLower(os.Getenv("TERM"))]
 }
+
+// NOTE: should close return a error? it only returns nil
 
 // Close returns the terminal to its previous mode
 func (s *State) Close() error {
