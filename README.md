@@ -3,8 +3,11 @@
 
 This is a copy of [liner](https://github.com/peterh/liner)
 
-I want something even simpler than that, but I do not want it to be a fork, so
-I copy it.
+~~I want something even simpler than that, but I do not want it to be a fork, so
+I copy it.~~
+
+Change my mind, too clompex, I just want a pre-filled input prompt that works
+on Linux.
 
 Liner is a command line editor with history. It was inspired by linenoise;
 everything Unix-like is a VT100 (or is trying very hard to be). If your

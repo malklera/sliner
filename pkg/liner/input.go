@@ -3,8 +3,8 @@ package liner
 
 import (
 	"bufio"
-	"golang.org/x/sys/unix"
 	"github.com/malklera/sliner/internal"
+	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
 	"strings"
@@ -106,4 +106,10 @@ func (s *State) Close() error {
 		s.origMode.ApplyMode()
 	}
 	return nil
+}
+
+func (s *State) stopPrompt() {
+	if s.terminalSupported {
+		s.defaultMode.ApplyMode()
+	}
 }

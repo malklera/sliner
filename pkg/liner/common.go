@@ -3,6 +3,8 @@ package liner
 import (
 	"bufio"
 	"container/ring"
+	"errors"
+	"fmt"
 )
 
 type commonState struct {
@@ -28,4 +30,30 @@ type ShouldRestart func(err error) bool
 // mode. ApplyMode sets the terminal to this mode.
 type ModeApplier interface {
 	ApplyMode() error
+}
+
+// ErrInvalidPrompt is returned is a given prompt contains any unprintable runes
+// (including substrings that could be colour codes on some platforms).
+var ErrInvalidPrompt = errors.New("invalid prompt, unprintable runes not allowed")
+
+// ErrNotTerminalOutput is returned from Prompt or PasswordPrompt if the
+// platform is normally supported, but stdout has been redirected
+var ErrNotTerminalOutput = errors.New("standard output is not a terminal")
+
+// ErrZeroColums is returned when liner experiences an error that it cannot
+// handle. For example, if the number of colums becomes zero during an
+// active call to Prompt
+var ErrZeroColums = errors.New("number of colums is zero")
+
+
+func (s *State) promptUnsupported(p string) (string, error) {
+	// TODO: check what this actually do
+	if !s.inputRedirected || !s.terminalSupported {
+		fmt.Print(p)
+	}
+	linebuf, _, err := s.r.ReadLine()
+	if err != nil {
+		return "", err
+	}
+	return string(linebuf), nil
 }
