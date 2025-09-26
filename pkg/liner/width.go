@@ -50,3 +50,18 @@ func getPrefixGlyphs(s []rune, num int) []rune {
 	}
 	return s[:p]
 }
+
+func getSuffixGlyphs(s []rune, num int) []rune {
+	p := len(s)
+	for n := 0; n < num && p > 0; p-- {
+		// speed up the common case
+		if s[p-1] < 127 {
+			n++
+			continue
+		}
+		if !unicode.IsOneOf(zeroWidth, s[p-1]) {
+			n++
+		}
+	}
+	return s[p:]
+}

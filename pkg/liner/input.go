@@ -3,11 +3,14 @@ package liner
 
 import (
 	"bufio"
+	"errors"
 	"github.com/malklera/sliner/internal"
 	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -45,6 +48,8 @@ type State struct {
 	pending     []rune
 	useCHA      bool
 }
+
+var errTimedOut = errors.New("timeout")
 
 // NewLiner initializes a new *State, and sets the terminal into raw mode. To
 // restore the terminal to its previous state, call State.Close().
@@ -366,4 +371,22 @@ func (s *State) readNext() (interface{}, error) {
 
 	// not reached
 	return r, nil
+}
+
+func (s *State) nextPending(timeout <-chan time.Time) (rune, error) {
+	select {
+	case thing, ok := <-s.next:
+		if !ok {
+			return 0, ErrTemporary
+		}
+		if thing.err != nil {
+			return 0, thing.err
+		}
+		s.pending = append(s.pending, thing.r)
+		return thing.r, nil
+	case <-timeout:
+		rv := s.pending[0]
+		s.pending = s.pending[1:]
+		return rv, errTimedOut
+	}
 }

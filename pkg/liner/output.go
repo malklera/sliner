@@ -2,8 +2,10 @@ package liner
 
 import (
 	"fmt"
+	"golang.org/x/sys/unix"
 	"os"
 	"strings"
+	"unsafe"
 )
 
 type winSize struct {
@@ -11,6 +13,17 @@ type winSize struct {
 	col    uint16
 	xpixel uint16
 	ypixel uint16
+}
+
+func (s *State) getColumns() bool {
+	var ws winSize
+	ok, _, _ := unix.Syscall(unix.SYS_IOCTL, uintptr(unix.Stdout),
+		unix.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws)))
+	if int(ok) < 0 {
+		return false
+	}
+	s.columns = int(ws.col)
+	return true
 }
 
 func (s *State) checkOutput() {
@@ -44,4 +57,8 @@ func (s *State) cursorPos(x int) {
 
 func (s *State) eraseLine() {
 	fmt.Print("\x1b[0K")
+}
+
+func (s *State) eraseScreen() {
+	fmt.Print("\x1b[H\x1b[2J")
 }

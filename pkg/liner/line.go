@@ -2,7 +2,9 @@ package liner
 
 import (
 	"bufio"
+	"container/ring"
 	"fmt"
+	"io"
 	"os"
 	"unicode"
 )
@@ -45,7 +47,38 @@ const (
 )
 
 const (
+	ctrlA = 1
+	ctrlB = 2
+	ctrlC = 3
+	ctrlD = 4
+	ctrlE = 5
+	ctrlF = 6
+	ctrlG = 7
+	ctrlH = 8
+	tab   = 9
+	lf    = 10
+	ctrlK = 11
+	ctrlL = 12
+	cr    = 13
+	ctrlN = 14
+	ctrlO = 15
+	ctrlP = 16
+	ctrlQ = 17
+	ctrlR = 18
+	ctrlS = 19
+	ctrlT = 20
+	ctrlU = 21
+	ctrlV = 22
+	ctrlW = 23
+	ctrlX = 24
+	ctrlY = 25
+	ctrlZ = 26
 	esc   = 27
+	bs    = 127
+)
+
+const (
+	beep = "\a"
 )
 
 //WARN: the prompt string cant have \n has to fix that
@@ -112,7 +145,6 @@ mainLoop:
 			return "", err
 		}
 
-		historyAction = false
 		switch v := next.(type) {
 		case rune:
 			switch v {
@@ -122,9 +154,6 @@ mainLoop:
 					if err != nil {
 						return "", err
 					}
-				}
-				if s.multiLineMode {
-					s.resetMultiLine(p, line, pos)
 				}
 				fmt.Println()
 				break mainLoop
@@ -179,43 +208,6 @@ mainLoop:
 					line = line[:pos]
 					s.needRefresh = true
 				}
-			case ctrlP: // up
-				historyAction = true
-				if historyStale {
-					historyPrefix = s.getHistoryByPrefix(string(line))
-					historyPos = len(historyPrefix)
-					historyStale = false
-				}
-				if historyPos > 0 {
-					if historyPos == len(historyPrefix) {
-						historyEnd = string(line)
-					}
-					historyPos--
-					line = []rune(historyPrefix[historyPos])
-					pos = len(line)
-					s.needRefresh = true
-				} else {
-					s.doBeep()
-				}
-			case ctrlN: // down
-				historyAction = true
-				if historyStale {
-					historyPrefix = s.getHistoryByPrefix(string(line))
-					historyPos = len(historyPrefix)
-					historyStale = false
-				}
-				if historyPos < len(historyPrefix) {
-					historyPos++
-					if historyPos == len(historyPrefix) {
-						line = []rune(historyEnd)
-					} else {
-						line = []rune(historyPrefix[historyPos])
-					}
-					pos = len(line)
-					s.needRefresh = true
-				} else {
-					s.doBeep()
-				}
 			case ctrlT: // transpose prev glyph with glyph under cursor
 				if len(line) < 2 || pos < 1 {
 					s.doBeep()
@@ -237,9 +229,6 @@ mainLoop:
 				s.needRefresh = true
 			case ctrlC: // reset
 				fmt.Println("^C")
-				if s.multiLineMode {
-					s.resetMultiLine(p, line, pos)
-				}
 				if s.ctrlCAborts {
 					return "", ErrPromptAborted
 				}
@@ -272,13 +261,6 @@ mainLoop:
 			case ctrlY: // Paste from Yank buffer
 				line, pos, next, err = s.yank(p, line, pos)
 				goto haveNext
-			case ctrlR: // Reverse Search
-				line, pos, next, err = s.reverseISearch(line, pos)
-				s.needRefresh = true
-				goto haveNext
-			case tab: // Tab completion
-				line, pos, next, err = s.tabComplete(p, line, pos)
-				goto haveNext
 			// Catch keys that do nothing, but you don't want them to beep
 			case esc:
 				// DO NOTHING
@@ -289,7 +271,7 @@ mainLoop:
 			case 0, 28, 29, 30, 31:
 				s.doBeep()
 			default:
-				if pos == len(line) && !s.multiLineMode &&
+				if pos == len(line) &&
 					len(p)+len(line) < s.columns*4 && // Avoid countGlyphs on large lines
 					countGlyphs(p)+countGlyphs(line) < s.columns-1 {
 					line = append(line, v)
@@ -364,41 +346,6 @@ mainLoop:
 				} else {
 					s.doBeep()
 				}
-			case up:
-				historyAction = true
-				if historyStale {
-					historyPrefix = s.getHistoryByPrefix(string(line))
-					historyPos = len(historyPrefix)
-					historyStale = false
-				}
-				if historyPos > 0 {
-					if historyPos == len(historyPrefix) {
-						historyEnd = string(line)
-					}
-					historyPos--
-					line = []rune(historyPrefix[historyPos])
-					pos = len(line)
-				} else {
-					s.doBeep()
-				}
-			case down:
-				historyAction = true
-				if historyStale {
-					historyPrefix = s.getHistoryByPrefix(string(line))
-					historyPos = len(historyPrefix)
-					historyStale = false
-				}
-				if historyPos < len(historyPrefix) {
-					historyPos++
-					if historyPos == len(historyPrefix) {
-						line = []rune(historyEnd)
-					} else {
-						line = []rune(historyPrefix[historyPos])
-					}
-					pos = len(line)
-				} else {
-					s.doBeep()
-				}
 			case home: // Start of line
 				pos = 0
 			case end: // End of line
@@ -434,30 +381,15 @@ mainLoop:
 				killAction = 2 // Mark that there was some killing
 			case altBs: // Erase word
 				pos, line, killAction = s.eraseWord(pos, line, killAction)
-			case winch: // Window change
-				if s.multiLineMode {
-					if s.maxRows-s.cursorRows > 0 {
-						s.moveDown(s.maxRows - s.cursorRows)
-					}
-					for i := 0; i < s.maxRows-1; i++ {
-						s.cursorPos(0)
-						s.eraseLine()
-						s.moveUp(1)
-					}
-					s.maxRows = 1
-					s.cursorRows = 1
-				}
 			}
 			s.needRefresh = true
 		}
-		if s.needRefresh && !s.inputWaiting() {
+		if s.needRefresh && len(s.next) == 0 {
 			err := s.refresh(p, line, pos)
 			if err != nil {
+				// TODO: why return empty string instead of nil?
 				return "", err
 			}
-		}
-		if !historyAction {
-			historyStale = true
 		}
 		if killAction > 0 {
 			killAction--
@@ -547,4 +479,127 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 		s.cursorPos(pLen + pos)
 	}
 	return err
+}
+
+func (s *State) doBeep() {
+	if !s.noBeep {
+		fmt.Print(beep)
+	}
+}
+
+// addToKillRing adds some text to the kill ring. If mode is 0 it adds it to a
+// new node in the end of the kill ring, and move the current pointer to the new
+// node. If mode is 1 or 2 it appends or prepends the text to the current entry
+// of the killRing.
+func (s *State) addToKillRing(text []rune, mode int) {
+	// Don't use the same underlying array as text
+	killLine := make([]rune, len(text))
+	copy(killLine, text)
+
+	// Point killRing to a newNode, procedure depends on the killring state and
+	// append mode.
+	if mode == 0 { // Add new node to killRing
+		if s.killRing == nil { // if killring is empty, create a new one
+			s.killRing = ring.New(1)
+		} else if s.killRing.Len() >= KillRingMax { // if killring is "full"
+			s.killRing = s.killRing.Next()
+		} else { // Normal case
+			s.killRing.Link(ring.New(1))
+			s.killRing = s.killRing.Next()
+		}
+	} else {
+		if s.killRing == nil { // if killring is empty, create a new one
+			s.killRing = ring.New(1)
+			s.killRing.Value = []rune{}
+		}
+		if mode == 1 { // Append to last entry
+			killLine = append(s.killRing.Value.([]rune), killLine...)
+		} else if mode == 2 { // Prepend to last entry
+			killLine = append(killLine, s.killRing.Value.([]rune)...)
+		}
+	}
+
+	// Save text in the current killring node
+	s.killRing.Value = killLine
+}
+
+func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, int) {
+	if pos == 0 {
+		s.doBeep()
+		return pos, line, killAction
+	}
+	// Remove whitespace to the left
+	var buf []rune // Store the deleted chars in a buffer
+	for {
+		if pos == 0 || !unicode.IsSpace(line[pos-1]) {
+			break
+		}
+		buf = append(buf, line[pos-1])
+		line = append(line[:pos-1], line[pos:]...)
+		pos--
+	}
+	// Remove non-whitespace to the left
+	for {
+		if pos == 0 || unicode.IsSpace(line[pos-1]) {
+			break
+		}
+		buf = append(buf, line[pos-1])
+		line = append(line[:pos-1], line[pos:]...)
+		pos--
+	}
+	// Invert the buffer and save the result on the killRing
+	var newBuf []rune
+	for i := len(buf) - 1; i >= 0; i-- {
+		newBuf = append(newBuf, buf[i])
+	}
+	if killAction > 0 {
+		s.addToKillRing(newBuf, 2) // Add in prepend mode
+	} else {
+		s.addToKillRing(newBuf, 0) // Add in normal mode
+	}
+	killAction = 2 // Mark that there was some killing
+
+	s.needRefresh = true
+	return pos, line, killAction
+}
+
+func (s *State) yank(p []rune, text []rune, pos int) ([]rune, int, interface{}, error) {
+	if s.killRing == nil {
+		return text, pos, rune(esc), nil
+	}
+
+	lineStart := text[:pos]
+	lineEnd := text[pos:]
+	var line []rune
+
+	for {
+		value := s.killRing.Value.([]rune)
+		line = make([]rune, 0)
+		line = append(line, lineStart...)
+		line = append(line, value...)
+		line = append(line, lineEnd...)
+
+		pos = len(lineStart) + len(value)
+		err := s.refresh(p, line, pos)
+		if err != nil {
+			return line, pos, 0, err
+		}
+
+		next, err := s.readNext()
+		if err != nil {
+			return line, pos, next, err
+		}
+
+		switch v := next.(type) {
+		case rune:
+			return line, pos, next, nil
+		case action:
+			switch v {
+			case altY:
+				s.killRing = s.killRing.Prev()
+			default:
+				return line, pos, next, nil
+			}
+		}
+	}
 }
