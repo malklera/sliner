@@ -1,8 +1,51 @@
 package liner
 
 import (
-	"unicode"
+	"bufio"
 	"fmt"
+	"os"
+	"unicode"
+)
+
+type action int
+
+const (
+	left action = iota
+	right
+	up
+	down
+	home
+	end
+	insert
+	del
+	pageUp
+	pageDown
+	f1
+	f2
+	f3
+	f4
+	f5
+	f6
+	f7
+	f8
+	f9
+	f10
+	f11
+	f12
+	altB
+	altBs // Alt+Backspace
+	altD
+	altF
+	altY
+	shiftTab
+	wordLeft
+	wordRight
+	winch
+	unknown
+)
+
+const (
+	esc   = 27
 )
 
 //WARN: the prompt string cant have \n has to fix that
@@ -35,11 +78,12 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 		return s.tooNarrow(prompt)
 	}
 
+	// TODO: once it works, get ride of the part that shows the prompt
 	fmt.Print(prompt)
 
 	var line = []rune(text)
 	// NOTE: do i use this?
-	killAction := 0        // used to mark kill related actions
+	killAction := 0 // used to mark kill related actions
 
 	defer s.stopPrompt()
 
@@ -445,8 +489,62 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 	}
 
 	s.needRefresh = false
-	if s.multiLineMode {
-		return s.refreshMultiLine(prompt, buf, pos)
+
+	s.cursorPos(0)
+	_, err := fmt.Print(string(prompt))
+	if err != nil {
+		return err
 	}
-	return s.refreshSingleLine(prompt, buf, pos)
+
+	pLen := countGlyphs(prompt)
+	bLen := countGlyphs(buf)
+	// on some OS / terminals extra column is needed to place the cursor char
+	if cursorColumn {
+		bLen++
+	}
+	pos = countGlyphs(buf[:pos])
+	if pLen+bLen < s.columns {
+		_, err = fmt.Print(string(buf))
+		s.eraseLine()
+		s.cursorPos(pLen + pos)
+	} else {
+		// Find space available
+		space := s.columns - pLen
+		space-- // space for cursor
+		start := pos - space/2
+		end := start + space
+		if end > bLen {
+			end = bLen
+			start = end - space
+		}
+		if start < 0 {
+			start = 0
+			end = space
+		}
+		pos -= start
+
+		// Leave space for markers
+		if start > 0 {
+			start++
+		}
+		if end < bLen {
+			end--
+		}
+		startRune := len(getPrefixGlyphs(buf, start))
+		line := getPrefixGlyphs(buf[startRune:], end-start)
+
+		// Output
+		if start > 0 {
+			fmt.Print("{")
+		}
+		fmt.Print(string(line))
+		if end < bLen {
+			fmt.Print("}")
+		}
+
+		// Set cursor position
+		s.eraseLine()
+		s.cursorPos(pLen + pos)
+	}
+	return err
 }

@@ -45,6 +45,9 @@ var ErrNotTerminalOutput = errors.New("standard output is not a terminal")
 // active call to Prompt
 var ErrZeroColums = errors.New("number of colums is zero")
 
+// ErrTemporary is returned when i do not know what when wrong, update it when i learn it
+var ErrTemporary = errors.New("temporary error, update this message when i learn what the error is")
+
 
 func (s *State) promptUnsupported(p string) (string, error) {
 	// TODO: check what this actually do

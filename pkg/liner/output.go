@@ -1,6 +1,7 @@
 package liner
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -26,4 +27,21 @@ func (s *State) checkOutput() {
 	// Assume CHA isn't supported (which should be safe, although it
 	// does result in occasional visible cursor jitter)
 	s.useCHA = false
+}
+
+func (s *State) cursorPos(x int) {
+	if s.useCHA {
+		// 'G' is "Cursor Character Absolute (CHA)"
+		fmt.Printf("\x1b[%dG", x+1)
+	} else {
+		// 'C' is "Cursor Forward (CUF)"
+		fmt.Print("\r")
+		if x > 0 {
+			fmt.Printf("\x1b[%dC", x)
+		}
+	}
+}
+
+func (s *State) eraseLine() {
+	fmt.Print("\x1b[0K")
 }
