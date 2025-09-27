@@ -55,16 +55,12 @@ const (
 	ctrlF = 6
 	ctrlG = 7
 	ctrlH = 8
-	tab   = 9
 	lf    = 10
 	ctrlK = 11
 	ctrlL = 12
 	cr    = 13
-	ctrlN = 14
 	ctrlO = 15
-	ctrlP = 16
 	ctrlQ = 17
-	ctrlR = 18
 	ctrlS = 19
 	ctrlT = 20
 	ctrlU = 21
@@ -498,7 +494,8 @@ func (s *State) addToKillRing(text []rune, mode int) {
 
 	// Point killRing to a newNode, procedure depends on the killring state and
 	// append mode.
-	if mode == 0 { // Add new node to killRing
+	switch mode {
+	case 0: // Add new node to killRing
 		if s.killRing == nil { // if killring is empty, create a new one
 			s.killRing = ring.New(1)
 		} else if s.killRing.Len() >= KillRingMax { // if killring is "full"
@@ -507,16 +504,18 @@ func (s *State) addToKillRing(text []rune, mode int) {
 			s.killRing.Link(ring.New(1))
 			s.killRing = s.killRing.Next()
 		}
-	} else {
+	case 1: // Append to last entry
 		if s.killRing == nil { // if killring is empty, create a new one
 			s.killRing = ring.New(1)
 			s.killRing.Value = []rune{}
 		}
-		if mode == 1 { // Append to last entry
-			killLine = append(s.killRing.Value.([]rune), killLine...)
-		} else if mode == 2 { // Prepend to last entry
-			killLine = append(killLine, s.killRing.Value.([]rune)...)
+		killLine = append(s.killRing.Value.([]rune), killLine...)
+	case 2: // Prepend to last entry
+		if s.killRing == nil { // if killring is empty, create a new one
+			s.killRing = ring.New(1)
+			s.killRing.Value = []rune{}
 		}
+		killLine = append(killLine, s.killRing.Value.([]rune)...)
 	}
 
 	// Save text in the current killring node
@@ -563,7 +562,7 @@ func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, in
 	return pos, line, killAction
 }
 
-func (s *State) yank(p []rune, text []rune, pos int) ([]rune, int, interface{}, error) {
+func (s *State) yank(p []rune, text []rune, pos int) ([]rune, int, any, error) {
 	if s.killRing == nil {
 		return text, pos, rune(esc), nil
 	}

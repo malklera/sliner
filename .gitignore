@@ -16,11 +16,5 @@
 !README.md
 !LICENSE
 
-!/internal/
-!/internal/**/*
-
 !/pkg/
 !/pkg/**/*
-
-!/test/
-!/test/**/*
