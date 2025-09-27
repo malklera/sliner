@@ -1,25 +1,16 @@
 # sLiner
----
 
-This is a copy of [liner](https://github.com/peterh/liner)
+
+Allows for a pre-filled input filed of a single line.
+
+This is a copy of [liner](https://github.com/peterh/liner), all credits to the
+original creator, I only strip his project of the thing I do not need.
 
 ~~I want something even simpler than that, but I do not want it to be a fork, so
 I copy it.~~
 
 Change my mind, too clompex, I just want a pre-filled input prompt that works
 on Linux.
-
-Liner is a command line editor with history. It was inspired by linenoise;
-everything Unix-like is a VT100 (or is trying very hard to be). If your
-terminal is not pretending to be a VT100, change it. Liner also support
-Windows.
-
-Liner is intended for use by cross-platform applications. Therefore, the
-decision was made to write it in pure Go, avoiding cgo, for ease of cross
-compilation. Furthermore, features only supported on some platforms have
-been intentionally omitted. For example, Ctrl-Z is "suspend" on Unix, but
-"EOF" on Windows. In the interest of making an application behave the same
-way on every supported platform, Ctrl-Z is ignored by Liner.
 
 
 Line Editing
@@ -46,18 +37,8 @@ Ctrl-W, Alt-BackSpace | Delete word leading up to cursor
 Alt-D        | Delete word following cursor
 Ctrl-K       | Delete from cursor to end of line
 Ctrl-U       | Delete from start of line to cursor
-Ctrl-P, Up   | Previous match from history
-Ctrl-N, Down | Next match from history
-Ctrl-R       | Reverse Search history (Ctrl-S forward, Ctrl-G cancel)
 Ctrl-Y       | Paste from Yank buffer (Alt-Y to paste next yank instead)
-Tab          | Next completion
-Shift-Tab    | (after Tab) Previous completion
 
-Note that "Previous" and "Next match from history" will retain the part of
-the line that the user has already typed, similar to zsh's
-"up-line-or-beginning-search" (which is the default on some systems) or
-bash's "history-search-backward" (which is my preferred behaviour, but does
-not appear to be the default `Up` keybinding on any system).
 
 Getting started
 -----------------
@@ -66,55 +47,24 @@ Getting started
 package main
 
 import (
+	"github.com/malklera/sliner/pkg/liner"
 	"log"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/malklera/sliner"
-)
-
-var (
-	history_fn = filepath.Join(os.TempDir(), ".liner_example_history")
-	names      = []string{"john", "james", "mary", "nancy"}
 )
 
 func main() {
 	line := liner.NewLiner()
 	defer line.Close()
 
-	line.SetCtrlCAborts(true)
+	log.Println("What is the best language?")
 
-	line.SetCompleter(func(line string) (c []string) {
-		for _, n := range names {
-			if strings.HasPrefix(n, strings.ToLower(line)) {
-				c = append(c, n)
-			}
-		}
-		return
-	})
+	input, err := line.PrefilledInput("Go", -1)
 
-	if f, err := os.Open(history_fn); err == nil {
-		line.ReadHistory(f)
-		f.Close()
+	if err != nil {
+		log.Fatalf("Error with the input: %v", err)
 	}
 
-	if name, err := line.Prompt("What is your name? "); err == nil {
-		log.Print("Got: ", name)
-		line.AppendHistory(name)
-	} else if err == liner.ErrPromptAborted {
-		log.Print("Aborted")
-	} else {
-		log.Print("Error reading line: ", err)
-	}
-
-	if f, err := os.Create(history_fn); err != nil {
-		log.Print("Error writing history file: ", err)
-	} else {
-		line.WriteHistory(f)
-		f.Close()
-	}
+	log.Printf("The best language is '%s'", input)
 }
 ```
 
-For documentation, see the [wiki]().
+For documentation, see the [wiki](https://github.com/malklera/sliner/wiki).

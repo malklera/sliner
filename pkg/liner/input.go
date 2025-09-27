@@ -88,6 +88,10 @@ func NewLiner() *State {
 		s.outputRedirected = !s.getColumns()
 	}
 
+	// this was a function on the original liner, you have to manually pass
+	// if the terminal your app will run allows this, i make the default true
+	s.ctrlCAborts = true
+
 	return &s
 }
 
