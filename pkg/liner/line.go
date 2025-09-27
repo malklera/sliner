@@ -353,18 +353,12 @@ mainLoop:
 				}
 				// Remove whitespace to the right
 				var buf []rune // Store the deleted chars in a buffer
-				for {
-					if pos == len(line) || !unicode.IsSpace(line[pos]) {
-						break
-					}
+				for pos != len(line) && unicode.IsSpace(line[pos]) {
 					buf = append(buf, line[pos])
 					line = append(line[:pos], line[pos+1:]...)
 				}
 				// Remove non-whitespace to the right
-				for {
-					if pos == len(line) || unicode.IsSpace(line[pos]) {
-						break
-					}
+				for pos != len(line) && !unicode.IsSpace(line[pos]) {
 					buf = append(buf, line[pos])
 					line = append(line[:pos], line[pos+1:]...)
 				}
@@ -529,19 +523,13 @@ func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, in
 	}
 	// Remove whitespace to the left
 	var buf []rune // Store the deleted chars in a buffer
-	for {
-		if pos == 0 || !unicode.IsSpace(line[pos-1]) {
-			break
-		}
+	for pos != 0 && unicode.IsSpace(line[pos-1]) {
 		buf = append(buf, line[pos-1])
 		line = append(line[:pos-1], line[pos:]...)
 		pos--
 	}
 	// Remove non-whitespace to the left
-	for {
-		if pos == 0 || unicode.IsSpace(line[pos-1]) {
-			break
-		}
+	for pos != 0 && !unicode.IsSpace(line[pos-1]) {
 		buf = append(buf, line[pos-1])
 		line = append(line[:pos-1], line[pos:]...)
 		pos--
