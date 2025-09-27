@@ -34,6 +34,10 @@ type ModeApplier interface {
 	ApplyMode() error
 }
 
+// ErrPromptAborted is returned from Prompt or PasswordPrompt when the user presses Ctrl-C
+// if SetCtrlCAborts(true) has been called on the State
+var ErrPromptAborted = errors.New("prompt aborted")
+
 // ErrNotTerminalOutput is returned from Prompt or PasswordPrompt if the
 // platform is normally supported, but stdout has been redirected
 var ErrNotTerminalOutput = errors.New("standard output is not a terminal")

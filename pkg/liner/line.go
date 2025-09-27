@@ -47,6 +47,7 @@ const (
 const (
 	ctrlA = 1
 	ctrlB = 2
+	ctrlC = 3
 	ctrlD = 4
 	ctrlE = 5
 	ctrlF = 6
@@ -195,6 +196,14 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.needRefresh = true
+			case ctrlC: // reset
+				fmt.Println("^C")
+				if s.ctrlCAborts {
+					return "", ErrPromptAborted
+				}
+				line = line[:0]
+				pos = 0
+				s.restartPrompt()
 			case ctrlH, bs: // Backspace
 				if pos <= 0 {
 					s.doBeep()
