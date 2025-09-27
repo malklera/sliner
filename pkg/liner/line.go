@@ -1,11 +1,9 @@
 package liner
 
 import (
-	"bufio"
 	"container/ring"
 	"fmt"
 	"io"
-	"os"
 	"unicode"
 )
 
@@ -80,35 +78,14 @@ const (
 //WARN: the prompt string cant have \n has to fix that
 // is a valid reason, maybe discard the prompt part and only dealth with the input field
 
-// PromptWithSuggestion displays prompt and an editable text with cursor at
+// PrefilledInput displays prompt and an editable text with cursor at
 // given position. The cursor will be set to the end of the line if given position
 // is negative or greater than length of text (in runes). Returns a line of user input, not
 // including a trailing newline character.
-func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (string, error) {
+func (s *State) PrefilledInput(text string, pos int) (string, error) {
 	if s.outputRedirected {
 		return "", ErrNotTerminalOutput
 	}
-
-	for _, r := range prompt {
-		if unicode.Is(unicode.C, r) {
-			return "", ErrInvalidPrompt
-		}
-	}
-
-	// WARN: check this, i do not understand why is here, what it do
-	if s.inputRedirected || !s.terminalSupported {
-		return s.promptUnsupported(prompt)
-	}
-
-	p := []rune(prompt)
-	// TODO: why do i have this here?
-	const minWorkingSpace = 10
-	if s.columns < countGlyphs(p)+minWorkingSpace {
-		return s.tooNarrow(prompt)
-	}
-
-	// TODO: once it works, get ride of the part that shows the prompt
-	fmt.Print(prompt)
 
 	var line = []rune(text)
 	// NOTE: do i use this?
@@ -120,7 +97,7 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 		pos = len(line)
 	}
 	if len(line) > 0 {
-		err := s.refresh(p, line, pos)
+		err := s.refresh(line, pos)
 		if err != nil {
 			return "", err
 		}
@@ -146,7 +123,7 @@ mainLoop:
 			switch v {
 			case cr, lf:
 				if s.needRefresh {
-					err := s.refresh(p, line, pos)
+					err := s.refresh(line, pos)
 					if err != nil {
 						return "", err
 					}
@@ -230,7 +207,6 @@ mainLoop:
 				}
 				line = line[:0]
 				pos = 0
-				fmt.Print(prompt)
 				s.restartPrompt()
 			case ctrlH, bs: // Backspace
 				if pos <= 0 {
@@ -255,7 +231,7 @@ mainLoop:
 			case ctrlW: // Erase word
 				pos, line, killAction = s.eraseWord(pos, line, killAction)
 			case ctrlY: // Paste from Yank buffer
-				line, pos, next, err = s.yank(p, line, pos)
+				line, pos, next, err = s.yank(line, pos)
 				goto haveNext
 			// Catch keys that do nothing, but you don't want them to beep
 			case esc:
@@ -268,8 +244,8 @@ mainLoop:
 				s.doBeep()
 			default:
 				if pos == len(line) &&
-					len(p)+len(line) < s.columns*4 && // Avoid countGlyphs on large lines
-					countGlyphs(p)+countGlyphs(line) < s.columns-1 {
+					len(line) < s.columns*4 && // Avoid countGlyphs on large lines
+					countGlyphs(line) < s.columns-1 {
 					line = append(line, v)
 					fmt.Printf("%c", v)
 					pos++
@@ -375,7 +351,7 @@ mainLoop:
 			s.needRefresh = true
 		}
 		if s.needRefresh && len(s.next) == 0 {
-			err := s.refresh(p, line, pos)
+			err := s.refresh(line, pos)
 			if err != nil {
 				// TODO: why return empty string instead of nil?
 				return "", err
@@ -388,24 +364,7 @@ mainLoop:
 	return string(line), nil
 }
 
-func (s *State) tooNarrow(prompt string) (string, error) {
-	// Docker and OpenWRT and etc sometimes return 0 column width
-	// Reset mode temporarily. Restore baked mode in case the terminal
-	// is wide enough for the next Prompt attempt.
-	m, merr := TerminalMode()
-	s.origMode.ApplyMode()
-	if merr == nil {
-		defer m.ApplyMode()
-	}
-	if s.r == nil {
-		// Windows does not always set s.r
-		s.r = bufio.NewReader(os.Stdin)
-		defer func() { s.r = nil }()
-	}
-	return s.promptUnsupported(prompt)
-}
-
-func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
+func (s *State) refresh(buf []rune, pos int) error {
 	if s.columns == 0 {
 		return ErrZeroColums
 	}
@@ -413,25 +372,22 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 	s.needRefresh = false
 
 	s.cursorPos(0)
-	_, err := fmt.Print(string(prompt))
-	if err != nil {
-		return err
-	}
 
-	pLen := countGlyphs(prompt)
 	bLen := countGlyphs(buf)
 	// on some OS / terminals extra column is needed to place the cursor char
 	if cursorColumn {
 		bLen++
 	}
 	pos = countGlyphs(buf[:pos])
-	if pLen+bLen < s.columns {
-		_, err = fmt.Print(string(buf))
+	if bLen < s.columns {
+		if _, err := fmt.Print(string(buf)); err != nil {
+			return err
+		}
 		s.eraseLine()
-		s.cursorPos(pLen + pos)
+		s.cursorPos(pos)
 	} else {
 		// Find space available
-		space := s.columns - pLen
+		space := s.columns
 		space-- // space for cursor
 		start := pos - space/2
 		end := start + space
@@ -466,9 +422,9 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 
 		// Set cursor position
 		s.eraseLine()
-		s.cursorPos(pLen + pos)
+		s.cursorPos(pos)
 	}
-	return err
+	return nil
 }
 
 func (s *State) doBeep() {
@@ -550,7 +506,7 @@ func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, in
 	return pos, line, killAction
 }
 
-func (s *State) yank(p []rune, text []rune, pos int) ([]rune, int, any, error) {
+func (s *State) yank(text []rune, pos int) ([]rune, int, any, error) {
 	if s.killRing == nil {
 		return text, pos, rune(esc), nil
 	}
@@ -567,7 +523,7 @@ func (s *State) yank(p []rune, text []rune, pos int) ([]rune, int, any, error) {
 		line = append(line, lineEnd...)
 
 		pos = len(lineStart) + len(value)
-		err := s.refresh(p, line, pos)
+		err := s.refresh(line, pos)
 		if err != nil {
 			return line, pos, 0, err
 		}

@@ -158,7 +158,7 @@ func (s *State) readNext() (any, error) {
 	case thing, ok := <-s.next:
 		if !ok {
 			// TODO: once i undertand the code more, i should update the error
-			// whay return 0 instead of nil?
+			// why return 0 instead of nil?
 			return 0, ErrTemporary
 		}
 		if thing.err != nil {

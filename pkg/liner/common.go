@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"container/ring"
 	"errors"
-	"fmt"
 )
 
 type commonState struct {
@@ -54,17 +53,3 @@ var ErrTemporary = errors.New("temporary error, update this message when i learn
 // ErrPromptAborted is returned from Prompt or PasswordPrompt when the user presses Ctrl-C
 // if SetCtrlCAborts(true) has been called on the State
 var ErrPromptAborted = errors.New("prompt aborted")
-
-
-
-func (s *State) promptUnsupported(p string) (string, error) {
-	// TODO: check what this actually do
-	if !s.inputRedirected || !s.terminalSupported {
-		fmt.Print(p)
-	}
-	linebuf, _, err := s.r.ReadLine()
-	if err != nil {
-		return "", err
-	}
-	return string(linebuf), nil
-}
