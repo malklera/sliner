@@ -4,7 +4,6 @@ package liner
 import (
 	"bufio"
 	"errors"
-	"github.com/malklera/sliner/internal"
 	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
