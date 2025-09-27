@@ -47,7 +47,6 @@ const (
 const (
 	ctrlA = 1
 	ctrlB = 2
-	ctrlC = 3
 	ctrlD = 4
 	ctrlE = 5
 	ctrlF = 6
@@ -85,7 +84,6 @@ func (s *State) PrefilledInput(text string, pos int) (string, error) {
 	}
 
 	var line = []rune(text)
-	// NOTE: do i use this?
 	killAction := 0 // used to mark kill related actions
 
 	defer s.stopPrompt()
@@ -197,14 +195,6 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.needRefresh = true
-			case ctrlC: // reset
-				fmt.Println("^C")
-				if s.ctrlCAborts {
-					return "", ErrPromptAborted
-				}
-				line = line[:0]
-				pos = 0
-				s.restartPrompt()
 			case ctrlH, bs: // Backspace
 				if pos <= 0 {
 					s.doBeep()
@@ -350,7 +340,6 @@ mainLoop:
 		if s.needRefresh && len(s.next) == 0 {
 			err := s.refresh(line, pos)
 			if err != nil {
-				// TODO: why return empty string instead of nil?
 				return "", err
 			}
 		}
@@ -445,7 +434,7 @@ func (s *State) addToKillRing(text []rune, mode int) {
 	case 0: // Add new node to killRing
 		if s.killRing == nil { // if killring is empty, create a new one
 			s.killRing = ring.New(1)
-		} else if s.killRing.Len() >= killRingMax { // if killring is "full"
+		} else if s.killRing.Len() >= KillRingMax { // if killring is "full"
 			s.killRing = s.killRing.Next()
 		} else { // Normal case
 			s.killRing.Link(ring.New(1))

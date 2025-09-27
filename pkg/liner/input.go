@@ -101,8 +101,6 @@ func TerminalSupported() bool {
 	return !bad[strings.ToLower(os.Getenv("TERM"))]
 }
 
-// NOTE: should close return a error? it only returns nil
-
 // Close returns the terminal to its previous mode
 func (s *State) Close() error {
 	signal.Stop(s.winch)
@@ -157,9 +155,7 @@ func (s *State) readNext() (any, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			// TODO: once i undertand the code more, i should update the error
-			// why return 0 instead of nil?
-			return 0, ErrTemporary
+			return 0, ErrCloseChannel
 		}
 		if thing.err != nil {
 			return nil, thing.err
@@ -376,7 +372,7 @@ func (s *State) nextPending(timeout <-chan time.Time) (rune, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			return 0, ErrTemporary
+			return 0, ErrCloseChannel
 		}
 		if thing.err != nil {
 			return 0, thing.err

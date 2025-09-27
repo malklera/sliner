@@ -2,7 +2,6 @@ package liner
 
 import (
 	"unicode"
-	// WARN: check if i can get ride of this package
 	"github.com/mattn/go-runewidth"
 )
 
