@@ -1,4 +1,4 @@
-// Package liner allows you to have a pre-filled prompt for input
+// Package liner allows you to have a pre-filled input field
 package liner
 
 import (

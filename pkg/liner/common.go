@@ -34,22 +34,13 @@ type ModeApplier interface {
 	ApplyMode() error
 }
 
-// ErrInvalidPrompt is returned is a given prompt contains any unprintable runes
-// (including substrings that could be colour codes on some platforms).
-var ErrInvalidPrompt = errors.New("invalid prompt, unprintable runes not allowed")
-
 // ErrNotTerminalOutput is returned from Prompt or PasswordPrompt if the
 // platform is normally supported, but stdout has been redirected
 var ErrNotTerminalOutput = errors.New("standard output is not a terminal")
 
-// ErrZeroColums is returned when liner experiences an error that it cannot
-// handle. For example, if the number of colums becomes zero during an
+// ErrZeroColums is returned if the number of colums becomes zero during an
 // active call to Prompt
 var ErrZeroColums = errors.New("number of colums is zero")
 
 // ErrTemporary is returned when i do not know what when wrong, update it when i learn it
 var ErrTemporary = errors.New("temporary error, update this message when i learn what the error is")
-
-// ErrPromptAborted is returned from Prompt or PasswordPrompt when the user presses Ctrl-C
-// if SetCtrlCAborts(true) has been called on the State
-var ErrPromptAborted = errors.New("prompt aborted")

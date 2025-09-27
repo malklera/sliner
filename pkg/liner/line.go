@@ -75,10 +75,7 @@ const (
 	beep = "\a"
 )
 
-//WARN: the prompt string cant have \n has to fix that
-// is a valid reason, maybe discard the prompt part and only dealth with the input field
-
-// PrefilledInput displays prompt and an editable text with cursor at
+// PrefilledInput displays an editable text field with cursor at
 // given position. The cursor will be set to the end of the line if given position
 // is negative or greater than length of text (in runes). Returns a line of user input, not
 // including a trailing newline character.
@@ -448,7 +445,7 @@ func (s *State) addToKillRing(text []rune, mode int) {
 	case 0: // Add new node to killRing
 		if s.killRing == nil { // if killring is empty, create a new one
 			s.killRing = ring.New(1)
-		} else if s.killRing.Len() >= KillRingMax { // if killring is "full"
+		} else if s.killRing.Len() >= killRingMax { // if killring is "full"
 			s.killRing = s.killRing.Next()
 		} else { // Normal case
 			s.killRing.Link(ring.New(1))
