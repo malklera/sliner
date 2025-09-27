@@ -70,9 +70,9 @@ func NewLiner() *State {
 	}
 	if s.terminalSupported && !s.inputRedirected && !s.outputRedirected {
 		mode := s.origMode
-		mode.Iflag &^= internal.Icrnl | internal.Inpck | internal.Istrip | internal.Ixon
-		mode.Cflag |= internal.Cs8
-		mode.Lflag &^= unix.ECHO | internal.Icanon | internal.Iexten
+		mode.Iflag &^= icrnl | inpck | istrip | ixon
+		mode.Cflag |= cs8
+		mode.Lflag &^= unix.ECHO | icanon | iexten
 		mode.Cc[unix.VMIN] = 1
 		mode.Cc[unix.VTIME] = 0
 		mode.ApplyMode()
