@@ -1,7 +1,10 @@
 # sLiner
 
 
-Allows for a pre-filled input filed of a single line.
+Allows for a pre-filled input field of a single line.
+
+If you would pass a empty string to pre-fill the input line, just do not bother
+with this package, use the standar library.
 
 This is a copy of [liner](https://github.com/peterh/liner), all credits to the
 original creator, I only strip his project of the thing I do not need.
@@ -16,8 +19,7 @@ on Linux.
 Line Editing
 ------------
 
-The following line editing commands are supported on platforms and terminals
-that Liner supports:
+The following line editing commands are supported on Linux and are not really tested.
 
 Keystroke    | Action
 ---------    | ------
